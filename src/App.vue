@@ -100,17 +100,20 @@
         let content = quill.getContents().ops
         let len = 0
         for (let i = 0; i < content.length; i++) {
-          if (content[i].insert && !content[i].attributes && !content[i].insert.image) {
-            len += content[i].insert.length
-          }
-          if (content[i].insert && content[i].insert.image && (content[i].insert.image.includes("http://") || content[i].insert.image.includes("https://"))) {
+          if (content[i].insert && content[i].insert.image && (!this.qqImg.includes(content[i].insert.image) && !this.symbolImg.includes(content[i].insert.image))) {
             quill.removeFormat(len, len + 1);
-          }
-          if (content[i].insert && content[i].insert.image) {
-            len += 1
+            continue
           }
           if (content[i].attributes) {
             quill.removeFormat(len, len + content[i].insert.length);
+            continue
+          }
+          if (content[i].insert && !content[i].attributes && !content[i].insert.image) {
+            len += content[i].insert.length
+            continue
+          }
+          if (content[i].insert && content[i].insert.image) {
+            len += 1
           }
         }
       },
