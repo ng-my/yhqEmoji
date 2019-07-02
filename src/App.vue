@@ -82,7 +82,7 @@
       this.symbolCode = myData.symbolCode.split("")
       this.qqImg = myData.qqImg;
       this.symbolImg = myData.symbolImg;
-      if (this.yhqOptions) { Object.assign({}, this.options, this.yhqOptions)}
+      if (this.yhqOptions) {Object.assign(this.options, this.yhqOptions)}
       if (this.yhqContent) { this.content = this.yhqContent}
       if (this.yhqStyle) { this.style = this.yhqStyle}
       if (this.yhqFaceStyle) { this.faceStyle = this.yhqFaceStyle}
