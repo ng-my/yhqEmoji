@@ -73,8 +73,7 @@
         qqCode: [],
         symbolCode: [],
         qqImg: [],
-        symbolImg: [],
-        encodeItem: ""
+        symbolImg: []
       }
     },
     created () {
@@ -144,9 +143,9 @@
             str = 'src="' + str + '">'
             item = item.replace(str, myData.qqCode[index])
           }
-          this.encodeImg(item);
+          return this.encodeImg(item);
         } else {
-          this.encodeItem = item;
+          return item
         }
       },
       encoding (content) {
@@ -156,10 +155,8 @@
         let arr = []
         arr = content.split("</p><p>")
         let newarr = arr.map((item) => {
-          item = item.replace(/(<img |<p>|<\/p>|<br>)?/g, "")
-          this.encodeItem = ""
-          this.encodeImg(item);
-          item = this.encodeItem
+          item = item.replace(/(<img |<p>|<\/p>|<br>|<\/br>)?/g, "")
+          item = this.encodeImg(item);
           return item
         })
         /* 这里转换后端服务存取的格式 */
@@ -175,7 +172,7 @@
         for (let i = 0; i < item.length; i++) {
           item[i] = "<p>" + item[i] + "</p>"
           if (item[i] === "<p></p>") {
-            item[i] = "</br>"
+            item[i] = "<p><br></p>"
           }
         }
         item = item.join("")
