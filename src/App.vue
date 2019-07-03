@@ -100,7 +100,7 @@
         let content = quill.getContents().ops
         let len = 0
         for (let i = 0; i < content.length; i++) {
-          if (content[i].insert && content[i].insert.image && (!this.qqImg.includes(content[i].insert.image) && !this.symbolImg.includes(content[i].insert.image))) {
+          if (content[i].insert && content[i].insert.image && (!myData.qqImg.includes(content[i].insert.image) && !myData.symbolImg.includes(content[i].insert.image))) {
             quill.removeFormat(len, len + 1);
             continue
           }
@@ -135,14 +135,14 @@
           let startIndex = item.indexOf("src=")
           let endIndex = item.indexOf(">")
           let str = item.substring(startIndex + 5, endIndex - 1)
-          let index = this.qqImg.indexOf(str)
+          let index = myData.qqImg.indexOf(str)
           if (index === -1) {
-            index = this.symbolImg.indexOf(str)
+            index = myData.symbolImg.indexOf(str)
             str = 'src="' + str + '">'
-            item = item.replace(str, this.symbolCode[index])
+            item = item.replace(str, myData.symbolCode[index])
           } else {
             str = 'src="' + str + '">'
-            item = item.replace(str, this.qqCode[index])
+            item = item.replace(str, myData.qqCode[index])
           }
           this.encodeImg(item);
         } else {
