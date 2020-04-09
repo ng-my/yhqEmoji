@@ -99,21 +99,35 @@
         let content = quill.getContents().ops
         let len = 0
         for (let i = 0; i < content.length; i++) {
-          if (content[i].insert && content[i].insert.image && (!myData.qqImg.includes(content[i].insert.image) && !myData.symbolImg.includes(content[i].insert.image))) {
+          let item = content[i]
+          if (item.attributes) {
+            let length = item.insert.length || 1
+            for (let one in item.attributes) {
+              quill.formatText(len, length, one, false); // 清除格式
+            }
+            len += len
+          }
+          let imgArr = myData.qqImg.concat(myData.symbolImg)
+          if (imgArr.includes(item.insert.image)) {
+            len += item.insert.image.length
+            continue
+          }
+          if (item.insert && item.insert.image && !imgArr.includes(item.insert.image)) {
             quill.removeFormat(len, len + 1);
             continue
           }
-          if (content[i].attributes) {
-            quill.removeFormat(len, len + content[i].insert.length);
+          /*if (item.attributes) {
+            let length = item.insert.length || item.insert.image.length
+            quill.removeFormat(len, len + length);
+            continue
+          }*/
+          if (item.insert && !item.attributes && !item.insert.image) {
+            len += item.insert.length
             continue
           }
-          if (content[i].insert && !content[i].attributes && !content[i].insert.image) {
-            len += content[i].insert.length
-            continue
-          }
-          if (content[i].insert && content[i].insert.image) {
+          /*if (item.insert && item.insert.image) {
             len += 1
-          }
+          }*/
         }
       },
       onFocus () {
