@@ -205,7 +205,7 @@
             }
             if (endnum) {
               let imgCode = content.substring(startnum, endnum + 1)
-              let imgNum = ''
+              let imgNum = -1
               myData.qqCode.forEach(function (value, index) {
                 if (imgCode === value) {
                   imgNum = index
