@@ -99,14 +99,17 @@
         let quill = this.getEditor()
         let content = quill.getContents().ops
         let len = 0
+        let formatLen = 0
         for (let i = 0; i < content.length; i++) {
+          console.log(len)
           let item = content[i]
           if (item.attributes) {
             let length = item.insert.length || item.insert.image.length || 1
             for (let one in item.attributes) {
-              quill.formatText(len, length, one, false); // 清除格式
+              quill.formatText(formatLen, formatLen + length, one, false); // 清除格式
             }
-            len += length
+            formatLen += length
+            continue
           }
           let imgArr = myData.qqImg.concat(myData.symbolImg)
           if (imgArr.includes(item.insert.image)) {
