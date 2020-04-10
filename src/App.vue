@@ -28,6 +28,7 @@
         </div>
       </div>
     </div>
+    <!--<button @click="encoding()">encoding</button>-->
   </div>
 </template>
 
@@ -101,11 +102,11 @@
         for (let i = 0; i < content.length; i++) {
           let item = content[i]
           if (item.attributes) {
-            let length = item.insert.length || 1
+            let length = item.insert.length || item.insert.image.length || 1
             for (let one in item.attributes) {
               quill.formatText(len, length, one, false); // 清除格式
             }
-            len += len
+            len += length
           }
           let imgArr = myData.qqImg.concat(myData.symbolImg)
           if (imgArr.includes(item.insert.image)) {
@@ -116,18 +117,13 @@
             quill.removeFormat(len, len + 1);
             continue
           }
-          /*if (item.attributes) {
-            let length = item.insert.length || item.insert.image.length
-            quill.removeFormat(len, len + length);
-            continue
-          }*/
           if (item.insert && !item.attributes && !item.insert.image) {
             len += item.insert.length
             continue
           }
-          /*if (item.insert && item.insert.image) {
+          if (item.insert && item.insert.image) {
             len += 1
-          }*/
+          }
         }
       },
       onFocus () {
