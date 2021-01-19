@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <quill-editor v-model="content" ref="yhqQuillEditor" @change="editorChange($event)" @focus="onFocus($event)" v-bind:options="options" :style="style"></quill-editor>
+  <div class="yhq-emoji-new-wrap">
+    <quill-editor v-model="content" ref="yhqQuillEditor" @change="editorChange($event)" @focus="onFocus($event)" :options="options" :style="style"></quill-editor>
     <div class="face-entry" @click="faceFlag=true" :style="faceStyle"></div>
     <div class="expression" v-if="faceFlag" :style="faceListStyle">
       <ul class="exp_hd">
@@ -12,14 +12,14 @@
         </li>
       </ul>
       <div class="face-list">
-        <div class="qq_cont" v-if="index==1">
+        <div class="qq_cont" v-show="index==1">
           <ul class="qq-face">
             <li class="face-item" v-for="(item, index) in qqImg" :key="index" @click="addFace(item, index, 1)">
               <img :src="item" alt="">
             </li>
           </ul>
         </div>
-        <div class="symbol_cont"  v-if="index==2">
+        <div class="symbol_cont" v-show="index==2">
           <ul class="symbol-face">
             <li class="face-item" v-for="(item, index) in symbolImg" :key="index" @click="addFace(item, index, 2)">
               <img :src="item" alt="">
@@ -28,217 +28,343 @@
         </div>
       </div>
     </div>
-    <!--<button @click="encoding()">encoding</button>-->
+    <!--<button @click="insertBlot()">insertBlot</button>-->
   </div>
 </template>
 
 <script>
-  import myData from './data'
-  export default {
-    name: "yhqEmoji",
-    // props: ['yhqOptions', 'yhqContent', 'yhqStyle', 'yhqFaceStyle', 'yhqFaceListStyle'],
-    props: {
-      yhqOptions: {
-        type: [Object, String],
-        default: () => ("")
-      },
-      yhqContent: {
-        type: String,
-        default: () => ("")
-      },
-      yhqStyle: {
-        type: [Object, String],
-        required: false,
-        default: () => ("")
-      },
-      yhqFaceStyle: {
-        type: [Object, String],
-        required: false,
-        default: () => ("")
-      },
-      yhqFaceListStyle: {
-        type: [Object, String],
-        required: false,
-        default: () => ("")
+import myData from './data'
+import Quill from "quill"
+export default {
+  name: "YhqEmoji",
+  model: {
+    prop: 'value',
+    event: 'change'
+  },
+  props: {
+    value: {
+      type: [Object, String],
+      default: () => ('')
+    },
+    yhqOptions: {
+      type: [Object, String],
+      default: () => ("")
+    },
+    yhqContent: {
+      type: String,
+      default: () => ("")
+    },
+    yhqStyle: {
+      type: [Object, String],
+      required: false,
+      default: () => ("")
+    },
+    yhqFaceStyle: {
+      type: [Object, String],
+      required: false,
+      default: () => ("")
+    },
+    yhqFaceListStyle: {
+      type: [Object, String],
+      required: false,
+      default: () => ("")
+    }
+  },
+  watch: {
+    content (value) {
+      let val = this.encoding(value)
+      // console.log("content-----set：", val)
+      this.$emit('change', val)
+    }
+  },
+  computed: {
+    options () {
+      const options = { placeholder: '请输入内容', modules: { toolbar: '' } }
+      return Object.assign(options, this.yhqOptions)
+    },
+    style () {
+      const style = { height: '240px' }
+      return Object.assign(style, this.yhqStyle)
+    },
+    faceStyle () {
+      const yhqFaceStyle = {}
+      return Object.assign(yhqFaceStyle, this.yhqFaceStyle)
+    },
+    faceListStyle () {
+      const yhqFaceListStyle = {}
+      return Object.assign(yhqFaceListStyle, this.yhqFaceListStyle)
+    }
+  },
+  data: function () {
+    return {
+      newPlug: false, // 是否是新版本。新版本使用v-model绑定数据。默认是老版本
+      content: "",
+      index: 1,
+      faceFlag: false
+    }
+  },
+  created () {
+    this.qqCode = myData.qqCode;
+    this.symbolCode = myData.symbolCode
+    this.qqImg = myData.qqImg;
+    this.symbolImg = myData.symbolImg;
+    this.initContent()
+    if (this.$listeners &&
+      this.$listeners.change &&
+      this.$listeners.change.fns &&
+      this.$listeners.change.fns.name &&
+      this.$listeners.change.fns.name === "callback" ) {
+      this.newPlug = true
+    }
+  },
+  mounted () {
+    this.registerNewBlot()
+    // this.insertBlot()
+  },
+  methods: {
+    initContent () {
+      // console.log("initContent：", val)
+      if (this.yhqContent) {
+        this.content = this.yhqContent
+      } else {
+        let val = this.deCoding(this.value)
+        if (val.includes('data-blot="YhqInlineBlot"')) {
+          this.$nextTick(() => {
+            let quill = this.getEditor()
+            quill.root.innerHTML = val
+          });
+        }
+        this.content = val
       }
     },
-    data: function () {
-      return {
-        options: {placeholder: '请输入内容', modules: { toolbar: ''}},
-        content: "",
-        style: {height: '240px'},
-        faceStyle: {},
-        faceListStyle: {},
-        index: 1,
-        faceFlag: false,
-        qqCode: [],
-        symbolCode: [],
-        qqImg: [],
-        symbolImg: []
+    registerNewBlot () { // 注册新组件
+      const blots = Quill.import('blots/embed');// 引入源码中的embed
+      class YhqInlineBlot extends blots {// 定义新的blot类型
+        static create (value) {
+          const node = super.create(value);
+          node.dataset.blot = "YhqInlineBlot";
+          node.dataset.type = value.type;
+          node.dataset.timestamp = (new Date).getTime();
+
+          node.title = value.title;
+          node.style = value.style;
+          node.className = value.className;
+
+          //   设置自定义html
+          node.innerHTML = value.title
+
+          node.setAttribute('contenteditable', 'false');
+          return node;
+        }
+
+        // 返回节点自身的value值 用于撤销操作
+        static value (node) {
+          return node.innerHTML
+        }
       }
+      // blotName
+      YhqInlineBlot.blotName = 'YhqInlineBlot';
+      // 标签类型自定义
+      YhqInlineBlot.tagName = 'span';
+      Quill.register(YhqInlineBlot, true);
     },
-    created () {
-      this.qqCode = myData.qqCode;
-      this.symbolCode = myData.symbolCode.split("")
-      this.qqImg = myData.qqImg;
-      this.symbolImg = myData.symbolImg;
-      if (this.yhqOptions) {Object.assign(this.options, this.yhqOptions)}
-      if (this.yhqContent) { this.content = this.yhqContent}
-      if (this.yhqStyle) { this.style = this.yhqStyle}
-      if (this.yhqFaceStyle) { this.faceStyle = this.yhqFaceStyle}
-      if (this.yhqFaceListStyle) { this.faceListStyle = this.yhqFaceListStyle}
+    getEditor () {
+      return this.$refs.yhqQuillEditor.quill
     },
-    methods: {
-      getEditor () {
-        return this.$refs.yhqQuillEditor.quill
-      },
-      getEditorContent () {
-        return this.content
-      },
-      editorChange (e) {
-        let quill = this.getEditor()
-        let content = quill.getContents().ops
-        let len = 0
-        let formatLen = 0
-        for (let i = 0; i < content.length; i++) {
-          console.log(len)
-          let item = content[i]
-          if (item.attributes) {
-            let length = item.insert.length || item.insert.image.length || 1
-            for (let one in item.attributes) {
-              quill.formatText(formatLen, formatLen + length, one, false); // 清除格式
-            }
-            formatLen += length
-            continue
+    getEditorContent () {
+      let quill = this.getEditor()
+      let content = quill.root.innerHTML
+      if (content === "<p><br></p>") {
+        content = ""
+      }
+      return content
+    },
+    editorChange (e) {
+      const quill = this.getEditor()
+      const imgArr = myData.qqImg.concat(myData.symbolImg)
+      const content = quill.getContents().ops
+      let len = 0
+      let formatLen = 0
+      for (let i = 0; i < content.length; i++) {
+        // console.log(len, content)
+        const item = content[i]
+        if (item.insert && item.insert.YhqInlineBlot) {
+          let arr = item.insert.YhqInlineBlot.split('<span contenteditable="false">')
+          let blotLen = arr[arr.length - 1].split('</span>')[0]
+          len += blotLen.length
+          continue
+        }
+        if (item.attributes) {
+          const length = item.insert.length || item.insert.image.length || 1
+          for (const one in item.attributes) {
+            quill.formatText(formatLen, formatLen + length, one, false); // 清除格式
           }
-          let imgArr = myData.qqImg.concat(myData.symbolImg)
-          if (imgArr.includes(item.insert.image)) {
+          formatLen += length
+          continue
+        }
+        if (item.insert && item.insert.image) {
+          let flag = imgArr.includes(item.insert.image)
+          if (flag) {
             len += item.insert.image.length
-            continue
-          }
-          if (item.insert && item.insert.image && !imgArr.includes(item.insert.image)) {
-            quill.removeFormat(len, len + 1);
-            continue
-          }
-          if (item.insert && !item.attributes && !item.insert.image) {
-            len += item.insert.length
-            continue
-          }
-          if (item.insert && item.insert.image) {
-            len += 1
-          }
-        }
-      },
-      onFocus () {
-        this.faceFlag = false
-      },
-      addFace (item, indexNo, type) {
-        let quill = this.getEditor()
-        let index = quill.selection.savedRange.index
-        if (type === 1) {
-          quill.insertEmbed(index, 'image', item, 'title')
-        } else {
-          quill.insertEmbed(index, 'image', item, 'title')
-        }
-        quill.setSelection(index + 1)
-      },
-      encodeImg (item) {
-        if (item.includes("src=")) {
-          let startIndex = item.indexOf("src=")
-          let endIndex = item.indexOf(">")
-          let str = item.substring(startIndex + 5, endIndex - 1)
-          let index = myData.qqImg.indexOf(str)
-          if (index === -1) {
-            index = myData.symbolImg.indexOf(str)
-            str = 'src="' + str + '">'
-            item = item.replace(str, myData.symbolCode[index])
           } else {
-            str = 'src="' + str + '">'
-            item = item.replace(str, myData.qqCode[index])
+            quill.removeFormat(len, len + 1);
           }
-          return this.encodeImg(item);
-        } else {
-          return item
+          continue
         }
-      },
-      encoding (content) {
-        if (!content) {
+        if (item.insert && !item.attributes && !item.insert.image) {
+          len += item.insert.length
+          continue
+        }
+        if (item.insert && item.insert.image) {
+          len += 1
+        }
+      }
+    },
+    insertBlot (content) {
+      // 插入静态变量span标签
+      let defaultContent = {
+        title: "",
+        style: "color: #0f6aff;display: inline-block;",
+        className: "yhq-emoji-blot",
+        type: ""
+      }
+      if (!content.title || !content.type) {
+        alert("请填写title和type")
+      }
+      const quill = this.getEditor()
+      const index = quill.selection.savedRange.index
+      quill.insertEmbed(index, 'YhqInlineBlot', Object.assign(defaultContent, content));
+      this.$nextTick(() => {
+        quill.setSelection(index + 1);
+      });
+    },
+    blotContentReplace (content, str) {
+      // 把content里含有 YhqInlineBlot 的span标签替换成想要的字符串
+      // content 没传值使用文本框里格式化好的值
+      // str 没传值使用YhqInlineBlot组件中的type值
+      if (content === undefined) {
+        content = this.encoding(this.content)
+      }
+      let indexStart = content.indexOf('<span data-blot="YhqInlineBlot" data-type=')
+      if (indexStart === -1) {
+        return content
+      } else {
+        let indexEnd = content.indexOf("<\/span>﻿<\/span>", indexStart + 1)
+        let yhqInlineBlot = content.substring(indexStart, indexEnd + 15)
+        if (str === undefined) {
+          let indexEnd_1 = content.indexOf('" data-timestamp="', indexStart + 1)
+          str = content.substring(indexStart + 43, indexEnd_1)
+        }
+        content = content.replace(yhqInlineBlot, str)
+        return this.blotContentReplace(content, str)
+      }
+    },
+    onFocus () {
+      this.faceFlag = false
+    },
+    /*向编辑器内容区域插入表情图片base64*/
+    addFace (item, indexNo, type) {
+      const quill = this.getEditor()
+      const index = quill.selection.savedRange.index
+      if (type === 1) {
+        quill.insertEmbed(index, 'image', item, 'qqImg')
+      } else {
+        quill.insertEmbed(index, 'image', item, 'symbolImg')
+      }
+      quill.setSelection(index + 1)
+    },
+    /*编码-图片=>[微笑]*/
+    encoding (content) {
+      if (!content) {
+        if (this.newPlug) {
+          return ""
+        } else {
           content = this.getEditorContent()
         }
-        let arr = []
-        arr = content.split("</p><p>")
-        let newarr = arr.map((item) => {
-          item = item.replace(/(<img |<p>|<\/p>|<br>|<\/br>)?/g, "")
-          item = this.encodeImg(item);
-          return item
-        })
-        /* 这里转换后端服务存取的格式 */
-        let str = newarr.join('\n').replace(/&nbsp;/g, "\t").trim()
-        return str
-      },
-      deCoding (item) {
-        if (item === undefined || item === null || item.length === 0) {
-          item = ""
-        }
-        // 换行解析操作
-        item = item.split('\u000a')
-        for (let i = 0; i < item.length; i++) {
-          item[i] = "<p>" + item[i] + "</p>"
-          if (item[i] === "<p></p>") {
-            item[i] = "<p><br></p>"
-          }
-        }
-        item = item.join("")
-        let content = item
-        let startnum = ''
-        let endnum = ''
-        let newContent = item
-        // qq表情
-        if (content.indexOf('[' > 0)) {
-          for (let i = 0; i < content.length; i++) {
-            if (content.charAt(i) === '[') {
-              startnum = i
-            }
-            if (content.charAt(i) === ']') {
-              endnum = i
-            }
-            if (endnum) {
-              let imgCode = content.substring(startnum, endnum + 1)
-              let imgNum = -1
-              myData.qqCode.forEach(function (value, index) {
-                if (imgCode === value) {
-                  imgNum = index
-                }
-              })
-              if (imgNum >= 0) {
-                imgCode = imgCode.substring(1, imgCode.length - 1)
-                let regExp = new RegExp(`\\[${imgCode}\\]`, "g");
-                let src = myData.qqImg[imgNum]
-                newContent = newContent.replace(regExp, `<img src="${src}">`)
-              }
-              endnum = ''
-              startnum = ''
-            }
-          }
-        }
-        // 符号表情
-        for (let j = 0; j < content.length; j++) {
-          myData.symbolCode.split("").map(function (value, index) {
-            if (value === content.charAt(j)) {
-              let imgNum = myData.symbolCode.indexOf(value)
-              let regExp = new RegExp(`${value}`, "g");
-              let src = myData.symbolImg[imgNum]
-              newContent = newContent.replace(regExp, `<img src="${src}">`)
-            }
-          })
-        }
-        return newContent
       }
+      // console.log("encoding:编码-图片=>[微笑]", content)
+      let arr = []
+      arr = content.split("</p><p>")
+      const newarr = arr.map((item) => {
+        item = item.replace(/(<p>|<\/p>|<br>|<\/br>)?/g, "")
+        item = this.imgReplaceToCode(item);
+        return item
+      })
+      /* 这里转换后端服务存取的格式 */
+      const str = newarr.join('\n').replace(/&nbsp;/g, "\t").trim()
+      return str
+    },
+    imgReplaceToCode (item) {
+      if (!(item.includes(myData.base64Str) && item.includes("<img src="))) {
+        return item
+      }
+      const startIndex = item.indexOf("<img src=")
+      const endIndex = item.indexOf(">", startIndex + 1)
+      let str = item.substring(startIndex + 10, endIndex - 1)
+      let index = myData.qqImg.indexOf(str)
+      if (index === -1) {
+        index = myData.symbolImg.indexOf(str)
+        str = '<img src="' + str + '">'
+        item = item.replace(str, myData.symbolCode[index])
+      } else {
+        str = '<img src="' + str + '">'
+        item = item.replace(str, myData.qqCode[index])
+      }
+      return this.imgReplaceToCode(item);
+    },
+    /*解码-[微笑]=>图片*/
+    deCoding (item) {
+      // console.log("deCoding:解码-[微笑]=>图片")
+      if (item === undefined || item === null || item.length === 0) {
+        item = ""
+      }
+      // 换行解析操作
+      item = item.split('\u000a')
+      for (let i = 0; i < item.length; i++) {
+        item[i] = "<p>" + item[i] + "</p>"
+        if (item[i] === "<p></p>") {
+          item[i] = "<p><br></p>"
+        }
+      }
+      let content = item.join("")
+      content = this.symbolCodeReplaceToImg(content)// 符号表情替换成图片
+      content = this.qqCodeReplaceToImg(content)//qq表情替换成图片
+      return content
+    },
+    //deCoding-符号表情替换成图片
+    symbolCodeReplaceToImg (content) {
+      myData.symbolCode.map((value, index) => {
+        const num = content.indexOf(value)
+        if (num > -1) {
+          const regExp = new RegExp(`${value}`, "g");
+          const src = myData.symbolImg[index]
+          content = content.replace(regExp, `<img src="${src}">`)
+        }
+      })
+      return content
+    },
+    //deCoding-qq表情替换成图片
+    qqCodeReplaceToImg (content) {
+      if (!(content.includes("[") && content.includes("]"))) {
+        return content
+      }
+      myData.qqCode.map((value, index) => {
+        const num = content.indexOf(value)
+        if (num > -1) {
+          const qqCode = value.replace("[", "").replace("]", "")
+          const regExp = new RegExp(`\\[${qqCode}\\]`, "g");
+          const src = myData.qqImg[index]
+          content = content.replace(regExp, `<img src="${src}">`)
+        }
+      })
+      return content
     }
+
   }
+}
 </script>
 
-<style scoped>
+<style>
   ul, li, p, a {
     list-style:none;
     margin: 0;
@@ -291,6 +417,4 @@
     width: 100%;
     height: 100%;
   }
-</style>
-<style>
 </style>
