@@ -165,7 +165,7 @@ export default {
       // blotName
       YhqInlineBlot.blotName = 'YhqInlineBlot';
       // 标签类型自定义
-      YhqInlineBlot.tagName = 'span';
+      YhqInlineBlot.tagName = 'section';
       Quill.register(YhqInlineBlot, true);
     },
     getEditor () {
@@ -239,21 +239,21 @@ export default {
       });
     },
     blotContentReplace (content, str) {
-      // 把content里含有 YhqInlineBlot 的span标签替换成想要的字符串
+      // 把content里含有 YhqInlineBlot 的section标签替换成想要的字符串
       // content 没传值使用文本框里格式化好的值
       // str 没传值使用YhqInlineBlot组件中的type值
       if (content === undefined) {
         content = this.encoding(this.content)
       }
-      let indexStart = content.indexOf('<span data-blot="YhqInlineBlot" data-type=')
+      let indexStart = content.indexOf('<section data-blot="YhqInlineBlot" data-type=')
       if (indexStart === -1) {
         return content
       } else {
-        let indexEnd = content.indexOf("<\/span>﻿<\/span>", indexStart + 1)
-        let yhqInlineBlot = content.substring(indexStart, indexEnd + 15)
+        let indexEnd = content.indexOf("<\/span>﻿<\/section>", indexStart + 1)
+        let yhqInlineBlot = content.substring(indexStart, indexEnd + 18)
         if (str === undefined) {
           let indexEnd_1 = content.indexOf('" data-timestamp="', indexStart + 1)
-          str = content.substring(indexStart + 43, indexEnd_1)
+          str = content.substring(indexStart + 46, indexEnd_1)
         }
         content = content.replace(yhqInlineBlot, str)
         return this.blotContentReplace(content, str)
