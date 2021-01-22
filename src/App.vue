@@ -29,7 +29,7 @@
         </div>
       </div>
     </div>
-    <!--<button @click="insertBlot()">insertBlot</button>-->
+    <!--<button @click="insertBlot({title: 'title',type: 'type'})">insertBlot</button>-->
   </div>
 </template>
 
@@ -130,7 +130,6 @@ export default {
   },
   mounted () {
     this.registerNewBlot()
-    // this.insertBlot()
   },
   methods: {
     handleCustomMatcher(node, Delta) {
@@ -202,10 +201,9 @@ export default {
         quill.setSelection(index + 1);
       });
     },
-    blotContentReplace (content, str) {
-      // 把content里含有 YhqInlineBlot 的yhqblot标签替换成想要的字符串
+    blotContentReplace (content) {
+      // 把content里含有 YhqInlineBlot 的yhqblot标签替换成定义的type字段
       // content 没传值使用文本框里格式化好的值
-      // str 没传值使用YhqInlineBlot组件中的type值
       if (content === undefined) {
         content = this.encoding(this.content)
       }
@@ -214,13 +212,13 @@ export default {
         return content
       } else {
         let indexEnd = content.indexOf("﻿<\/yhqblot>", indexStart + 1)
-        let yhqInlineBlot = content.substring(indexStart, indexEnd + 18)
-        if (str === undefined) {
-          let indexEnd_1 = content.indexOf('" class=', indexStart + 1)
-          str = content.substring(indexStart + 46, indexEnd_1)
-        }
+        let yhqInlineBlot = content.substring(indexStart, indexEnd + 11)
+
+        let indexEnd_1 = content.indexOf('" class=', indexStart + 1)
+        let str = content.substring(indexStart + 46, indexEnd_1)
+
         content = content.replace(yhqInlineBlot, str)
-        return this.blotContentReplace(content, str)
+        return this.blotContentReplace(content)
       }
     },
     onFocus () {
