@@ -31,11 +31,11 @@ Vue.use(yhqEmoji)
 <yhqEmoji :yhqContent="content" ref="textEdit"></yhqEmoji>
 
 props: {
-      value: {// 1.2.0版本之后 新增v-model
+      value: {// 1.2.1版本之后 新增v-model
         type: [Object, String],
         default: () => ('')
       },
-      yhqContent: { // 1.2.0版本之后 不鼓励使用。可以直接使用 v-model
+      yhqContent: { // 1.2.1版本之后 不鼓励使用。可以直接使用 v-model
         type: String,
         default: () => ("")
       },
@@ -60,7 +60,7 @@ props: {
       }
     }
 
-    1.2.0版本之后可以使用v-model双向绑定。（放弃原来的 yhqContent 传值）
+    1.2.1版本之后可以使用v-model双向绑定。（放弃原来的 yhqContent 传值）
 
 #### Function:
   1、encoding(content)：可以将富文本中的html代码转化成微信需要的数据格式
@@ -71,7 +71,7 @@ props: {
     参数 content（类型String） 为必填。
     this.yhqEmoji.yhqEmoji.methods.deCoding(content)
 
-  3、insertBlot(blot)：//自定义组件 插入静态变量变量标签  【1.2.0版本新增方法】
+  3、insertBlot(blot)：//自定义组件 插入静态变量变量标签  【1.2.1版本新增方法】
     参数 blot（类型obj）
     {
         title: "",
@@ -82,7 +82,7 @@ props: {
     其中title和type不能为空。
     this.$refs.textEdit.insertBlot(blot)
 
-    4、blotContentReplace(content, str)  【1.2.0版本新增方法】
+    4、blotContentReplace(content, str)  【1.2.1版本新增方法】
     // 把content里含有 YhqInlineBlot 的span标签替换成想要的字符串
     // content 没传值使用文本框里格式化好的值
     // str 没传值使用YhqInlineBlot组件中的type值
@@ -90,7 +90,7 @@ props: {
     参数 str 需要替换成的字符串。没传值使用YhqInlineBlot组件中的type值
     this.$refs.textEdit.blotContentReplace(content, str)
 
-####1.2.0版本之后新增以下内容
+####1.2.1版本之后新增以下内容
 
     1：可以使用v-model绑定数据。返回的数据是直接格式好的。不用再调用内部方法进行转换
 
