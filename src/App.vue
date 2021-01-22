@@ -1,6 +1,7 @@
 <template>
   <div class="yhq-emoji-new-wrap">
-    <quill-editor v-model="content" ref="yhqQuillEditor" @change="editorChange($event)" @focus="onFocus($event)" :options="options" :style="style"></quill-editor>
+    <!--@change="editorChange($event)"-->
+    <quill-editor v-model="content" ref="yhqQuillEditor" @focus="onFocus($event)" :options="options" :style="style"></quill-editor>
     <div class="face-entry" @click="faceFlag=true" :style="faceStyle"></div>
     <div class="expression" v-if="faceFlag" :style="faceListStyle">
       <ul class="exp_hd">
@@ -79,7 +80,17 @@ export default {
   },
   computed: {
     options () {
-      const options = { placeholder: '请输入内容', modules: { toolbar: '' } }
+      const options =
+      {
+        placeholder: '请输入内容',
+        modules: {
+          clipboard: {
+            // 粘贴版，处理粘贴时候带图片
+            matchers: [[Node.ELEMENT_NODE, this.handleCustomMatcher]],
+          },
+          toolbar: ''
+        }
+      }
       return Object.assign(options, this.yhqOptions)
     },
     style () {
@@ -122,6 +133,29 @@ export default {
     // this.insertBlot()
   },
   methods: {
+    handleCustomMatcher(node, Delta) {
+      let ops = []
+      const imgArr = myData.qqImg.concat(myData.symbolImg)
+      Delta.ops.forEach(op => {
+        if ((op.insert && typeof op.insert === 'string') || (op.insert && op.insert.image && imgArr.includes(op.insert.image))) {
+          // 只能粘贴文字和表情
+          ops.push({
+            insert: op.insert,
+          })
+        } else {
+          let message = "只能粘贴文字和表情"
+          if (op.insert && op.insert.image) {
+            message = "不能粘贴图片"
+          }
+          if (op.insert && typeof op.insert === 'object' && op.insert.YhqInlineBlot !== undefined ) {
+            message = "不能粘贴插入的变量"
+          }
+          this.$emit("quillTip", message)
+        }
+      })
+      Delta.ops = ops
+      return Delta
+    },
     initContent () {
       // console.log("initContent：", val)
       if (this.yhqContent) {
@@ -137,37 +171,7 @@ export default {
         this.content = val
       }
     },
-    registerNewBlot () { // 注册新组件
-      const blots = Quill.import('blots/embed');// 引入源码中的embed
-      class YhqInlineBlot extends blots {// 定义新的blot类型
-        static create (value) {
-          const node = super.create(value);
-          node.dataset.blot = "YhqInlineBlot";
-          node.dataset.type = value.type;
-          node.dataset.timestamp = (new Date).getTime();
 
-          node.title = value.title;
-          node.style = value.style;
-          node.className = value.className;
-
-          //   设置自定义html
-          node.innerHTML = value.title
-
-          node.setAttribute('contenteditable', 'false');
-          return node;
-        }
-
-        // 返回节点自身的value值 用于撤销操作
-        static value (node) {
-          return node.innerHTML
-        }
-      }
-      // blotName
-      YhqInlineBlot.blotName = 'YhqInlineBlot';
-      // 标签类型自定义
-      YhqInlineBlot.tagName = 'section';
-      Quill.register(YhqInlineBlot, true);
-    },
     getEditor () {
       return this.$refs.yhqQuillEditor.quill
     },
@@ -179,47 +183,7 @@ export default {
       }
       return content
     },
-    editorChange (e) {
-      const quill = this.getEditor()
-      const imgArr = myData.qqImg.concat(myData.symbolImg)
-      const content = quill.getContents().ops
-      let len = 0
-      let formatLen = 0
-      for (let i = 0; i < content.length; i++) {
-        // console.log(len, content)
-        const item = content[i]
-        if (item.insert && item.insert.YhqInlineBlot) {
-          let arr = item.insert.YhqInlineBlot.split('<span contenteditable="false">')
-          let blotLen = arr[arr.length - 1].split('</span>')[0]
-          len += blotLen.length
-          continue
-        }
-        if (item.attributes) {
-          const length = item.insert.length || item.insert.image.length || 1
-          for (const one in item.attributes) {
-            quill.formatText(formatLen, formatLen + length, one, false); // 清除格式
-          }
-          formatLen += length
-          continue
-        }
-        if (item.insert && item.insert.image) {
-          let flag = imgArr.includes(item.insert.image)
-          if (flag) {
-            len += item.insert.image.length
-          } else {
-            quill.removeFormat(len, len + 1);
-          }
-          continue
-        }
-        if (item.insert && !item.attributes && !item.insert.image) {
-          len += item.insert.length
-          continue
-        }
-        if (item.insert && item.insert.image) {
-          len += 1
-        }
-      }
-    },
+
     insertBlot (content) {
       // 插入静态变量span标签
       let defaultContent = {
@@ -239,20 +203,20 @@ export default {
       });
     },
     blotContentReplace (content, str) {
-      // 把content里含有 YhqInlineBlot 的section标签替换成想要的字符串
+      // 把content里含有 YhqInlineBlot 的yhqblot标签替换成想要的字符串
       // content 没传值使用文本框里格式化好的值
       // str 没传值使用YhqInlineBlot组件中的type值
       if (content === undefined) {
         content = this.encoding(this.content)
       }
-      let indexStart = content.indexOf('<section data-blot="YhqInlineBlot" data-type=')
+      let indexStart = content.indexOf('<yhqblot data-blot="YhqInlineBlot" data-type=')
       if (indexStart === -1) {
         return content
       } else {
-        let indexEnd = content.indexOf("<\/span>﻿<\/section>", indexStart + 1)
+        let indexEnd = content.indexOf("﻿<\/yhqblot>", indexStart + 1)
         let yhqInlineBlot = content.substring(indexStart, indexEnd + 18)
         if (str === undefined) {
-          let indexEnd_1 = content.indexOf('" data-timestamp="', indexStart + 1)
+          let indexEnd_1 = content.indexOf('" class=', indexStart + 1)
           str = content.substring(indexStart + 46, indexEnd_1)
         }
         content = content.replace(yhqInlineBlot, str)
@@ -288,6 +252,7 @@ export default {
       const newarr = arr.map((item) => {
         item = item.replace(/(<p>|<\/p>|<br>|<\/br>)?/g, "")
         item = this.imgReplaceToCode(item);
+        item = this.deleteRedundantSpan(item);
         return item
       })
       /* 这里转换后端服务存取的格式 */
@@ -311,6 +276,15 @@ export default {
         item = item.replace(str, myData.qqCode[index])
       }
       return this.imgReplaceToCode(item);
+    },
+    deleteRedundantSpan (item) {
+      if (item.includes('<yhqblot data-blot="YhqInlineBlot" data-type=') && item.includes('<span contenteditable="false">')) {
+        item = item.replace('<span contenteditable="false">', "")
+        item = item.replace('<\/span>﻿<\/yhqblot>', "﻿<\/yhqblot>")
+        return this.deleteRedundantSpan(item)
+      } else {
+        return item
+      }
     },
     /*解码-[微笑]=>图片*/
     deCoding (item) {
@@ -358,8 +332,77 @@ export default {
         }
       })
       return content
-    }
+    },
+    registerNewBlot () { // 注册新组件
+      const blots = Quill.import('blots/embed');// 引入源码中的embed
+      class YhqInlineBlot extends blots {// 定义新的blot类型
+        static create (value) {
+          const node = super.create(value);
+          node.dataset.blot = "YhqInlineBlot";
+          node.dataset.type = value.type;
 
+          node.style = value.style;
+          node.className = value.className;
+          node.contenteditable = false;
+
+          //   设置自定义html
+          node.innerHTML = value.title
+
+          return node;
+        }
+
+        // 返回节点自身的value值 用于撤销操作
+        static value (node) {
+          return node.innerHTML
+        }
+      }
+      // blotName
+      YhqInlineBlot.blotName = 'YhqInlineBlot';
+      // 标签类型自定义
+      YhqInlineBlot.tagName = 'yhqblot';
+      Quill.register(YhqInlineBlot, true);
+    },
+    editorChange (e) {
+      const quill = this.getEditor()
+      const imgArr = myData.qqImg.concat(myData.symbolImg)
+      const content = quill.getContents().ops
+      let len = 0
+      let formatLen = 0
+      for (let i = 0; i < content.length; i++) {
+        const item = content[i]
+        if (item.insert && item.insert.YhqInlineBlot) {
+          let arr = item.insert.YhqInlineBlot.split('<span contenteditable="false">')
+          let blotLen = arr[arr.length - 1].split('</span>')[0]
+          len += blotLen.length
+          continue
+        }
+        if (item.attributes) {
+          const length = item.insert.length || item.insert.image.length || 1
+          for (const one in item.attributes) {
+            quill.formatText(formatLen, formatLen + length, one, false); // 清除格式
+          }
+          formatLen += length
+          continue
+        }
+        if (item.insert && item.insert.image) {
+          let flag = imgArr.includes(item.insert.image)
+          if (flag) {
+            len += item.insert.image.length
+          } else {
+            // quill.format(item.insert.image, false);
+            quill.removeFormat(len, item.insert.image.length);
+          }
+          continue
+        }
+        if (item.insert && !item.attributes && !item.insert.image) {
+          len += item.insert.length
+          continue
+        }
+        if (item.insert && item.insert.image) {
+          len += 1
+        }
+      }
+    }
   }
 }
 </script>
