@@ -460,7 +460,6 @@ export default {
     background-color: #fff;
     max-height: 203px;
     overflow: auto;
-    padding: 5px;
   }
   .face-list .face-item {
     width: 25px;
