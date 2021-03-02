@@ -3,30 +3,30 @@
     <!--@change="editorChange($event)"-->
     <quill-editor v-model="content" ref="yhqQuillEditor" @focus="onFocus($event)" :options="options" :style="style"></quill-editor>
     <div class="face-entry" @click="faceFlag=true" :style="faceStyle"></div>
-    <div class="expression" v-if="faceFlag" :style="faceListStyle">
-      <ul class="exp_hd">
+    <div class="expression" v-show="faceFlag" :style="faceListStyle">
+      <!--<ul class="exp_hd">
         <li class="exp_hd_item" :class="{'active': index == 1}" @click="index = 1;">
           <a href="javascript:;">QQ表情</a>
         </li>
         <li class="exp_hd_item " :class="{'active': index == 2}" @click="index = 2;">
           <a href="javascript:;">符号表情</a>
         </li>
-      </ul>
+      </ul>-->
       <div class="face-list">
-        <div class="qq_cont" v-show="index==1">
+        <div class="qq_cont">
           <ul class="qq-face">
-            <li class="face-item" v-for="(item, index) in qqImg" :key="index" @click="addFace(item, index, 1)">
+            <li class="face-item" v-for="(item, index) in imgAll" :key="index" @click="addFace(item, index)">
               <img :src="item" alt="">
             </li>
           </ul>
         </div>
-        <div class="symbol_cont" v-show="index==2">
+        <!--<div class="symbol_cont" v-show="index==2">
           <ul class="symbol-face">
             <li class="face-item" v-for="(item, index) in symbolImg" :key="index" @click="addFace(item, index, 2)">
               <img :src="item" alt="">
             </li>
           </ul>
-        </div>
+        </div>-->
       </div>
     </div>
     <!--<button @click="insertBlot({title: 'title',type: 'type'})">insertBlot</button>-->
@@ -74,7 +74,6 @@ export default {
   watch: {
     content (value) {
       let val = this.encoding(value)
-      // console.log("content-----set：", val)
       this.$emit('change', val)
     }
   },
@@ -108,18 +107,30 @@ export default {
   },
   data: function () {
     return {
+      codeAll: [],
+      imgAll: [],
+      qqCode: [],
+      symbolCode: [],
+      qqImg: [],
+      symbolImg: [],
       newPlug: false, // 是否是新版本。新版本使用v-model绑定数据。默认是老版本
       content: "",
-      index: 1,
       faceFlag: false
     }
   },
   created () {
+    // 初始化img、code等数据
     this.qqCode = myData.qqCode;
     this.symbolCode = myData.symbolCode
     this.qqImg = myData.qqImg;
     this.symbolImg = myData.symbolImg;
+    this.codeAll = myData.qqCode.concat(myData.symbolCode)
+    this.imgAll = myData.qqImg.concat(myData.symbolImg)
+
+    // 初始化content
     this.initContent()
+
+    // if 判断是否是新版本
     if (this.$listeners &&
       this.$listeners.change &&
       this.$listeners.change.fns &&
@@ -129,9 +140,10 @@ export default {
     }
   },
   mounted () {
-    this.registerNewBlot()
+    this.registerNewBlot() // 注册新组件
   },
   methods: {
+    /*粘贴版，处理粘贴时候带图片*/
     handleCustomMatcher(node, Delta) {
       let ops = []
       const imgArr = myData.qqImg.concat(myData.symbolImg)
@@ -155,8 +167,8 @@ export default {
       Delta.ops = ops
       return Delta
     },
+    /*初始化content*/
     initContent () {
-      // console.log("initContent：", val)
       if (this.yhqContent) {
         this.content = this.yhqContent
       } else {
@@ -170,7 +182,9 @@ export default {
         this.content = val
       }
     },
-
+    onFocus () {
+      this.faceFlag = false
+    },
     getEditor () {
       return this.$refs.yhqQuillEditor.quill
     },
@@ -182,50 +196,9 @@ export default {
       }
       return content
     },
-
-    insertBlot (content) {
-      // 插入静态变量span标签
-      let defaultContent = {
-        title: "",
-        style: "color: #0f6aff;display: inline-block;",
-        className: "yhq-emoji-blot",
-        type: ""
-      }
-      if (!content.title || !content.type) {
-        alert("请填写title和type")
-      }
-      const quill = this.getEditor()
-      const index = quill.selection.savedRange.index
-      quill.insertEmbed(index, 'YhqInlineBlot', Object.assign(defaultContent, content));
-      this.$nextTick(() => {
-        quill.setSelection(index + 1);
-      });
-    },
-    blotContentReplace (content) {
-      // 把content里含有 YhqInlineBlot 的yhqblot标签替换成定义的type字段
-      // content 没传值使用文本框里格式化好的值
-      if (content === undefined) {
-        content = this.encoding(this.content)
-      }
-      let indexStart = content.indexOf('<yhqblot data-blot="YhqInlineBlot" data-type=')
-      if (indexStart === -1) {
-        return content
-      } else {
-        let indexEnd = content.indexOf("﻿<\/yhqblot>", indexStart + 1)
-        let yhqInlineBlot = content.substring(indexStart, indexEnd + 11)
-
-        let indexEnd_1 = content.indexOf('" class=', indexStart + 1)
-        let str = content.substring(indexStart + 46, indexEnd_1)
-
-        content = content.replace(yhqInlineBlot, str)
-        return this.blotContentReplace(content)
-      }
-    },
-    onFocus () {
-      this.faceFlag = false
-    },
     /*向编辑器内容区域插入表情图片base64*/
-    addFace (item, indexNo, type) {
+    addFace (item, indexNo) {
+      let type = indexNo >= myData.qqCode.length ? 1 : 2
       const quill = this.getEditor()
       const index = quill.selection.savedRange.index
       if (type === 1) {
@@ -257,6 +230,7 @@ export default {
       const str = newarr.join('\n').replace(/&nbsp;/g, "\t").trim()
       return str
     },
+    /*img替换成code*/
     imgReplaceToCode (item) {
       if (!(item.includes(myData.base64Str) && item.includes("<img src="))) {
         return item
@@ -275,6 +249,7 @@ export default {
       }
       return this.imgReplaceToCode(item);
     },
+    /*去除多余的自定义blot的span标签*/
     deleteRedundantSpan (item) {
       if (item.includes('<yhqblot data-blot="YhqInlineBlot" data-type=') && item.includes('<span contenteditable="false">')) {
         item = item.replace('<span contenteditable="false">', "")
@@ -331,7 +306,8 @@ export default {
       })
       return content
     },
-    registerNewBlot () { // 注册新组件
+    /*注册新组件*/
+    registerNewBlot () {
       const blots = Quill.import('blots/embed');// 引入源码中的embed
       class YhqInlineBlot extends blots {// 定义新的blot类型
         static create (value) {
@@ -360,7 +336,46 @@ export default {
       YhqInlineBlot.tagName = 'yhqblot';
       Quill.register(YhqInlineBlot, true);
     },
-    editorChange (e) {
+    /*向编辑区域插入自定义blot*/
+    insertBlot (content) {
+      // 插入静态变量span标签
+      let defaultContent = {
+        title: "",
+        style: "color: #0f6aff;display: inline-block;",
+        className: "yhq-emoji-blot",
+        type: ""
+      }
+      if (!content.title || !content.type) {
+        alert("请填写title和type")
+      }
+      const quill = this.getEditor()
+      const index = quill.selection.savedRange.index
+      quill.insertEmbed(index, 'YhqInlineBlot', Object.assign(defaultContent, content));
+      this.$nextTick(() => {
+        quill.setSelection(index + 1);
+      });
+    },
+    /*把content里含有 YhqInlineBlot 的yhqblot标签替换成定义的type字段*/
+    blotContentReplace (content) {
+      // content 没传值使用文本框里格式化好的值
+      if (content === undefined) {
+        content = this.encoding(this.content)
+      }
+      let indexStart = content.indexOf('<yhqblot data-blot="YhqInlineBlot" data-type=')
+      if (indexStart === -1) {
+        return content
+      } else {
+        let indexEnd = content.indexOf("﻿<\/yhqblot>", indexStart + 1)
+        let yhqInlineBlot = content.substring(indexStart, indexEnd + 11)
+
+        let indexEnd_1 = content.indexOf('" class=', indexStart + 1)
+        let str = content.substring(indexStart + 46, indexEnd_1)
+
+        content = content.replace(yhqInlineBlot, str)
+        return this.blotContentReplace(content)
+      }
+    }
+    /*editorChange (e) {
       const quill = this.getEditor()
       const imgArr = myData.qqImg.concat(myData.symbolImg)
       const content = quill.getContents().ops
@@ -400,12 +415,15 @@ export default {
           len += 1
         }
       }
-    }
+    }*/
   }
 }
 </script>
 
 <style>
+  *{
+    box-sizing: border-box;
+  }
   ul, li, p, a {
     list-style:none;
     margin: 0;
@@ -440,9 +458,9 @@ export default {
   }
   .qq-face,.symbol-face {
     background-color: #fff;
-    padding-left: 5px;
     max-height: 203px;
     overflow: auto;
+    padding: 5px;
   }
   .face-list .face-item {
     width: 25px;
